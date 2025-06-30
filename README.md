@@ -1,115 +1,60 @@
-# Blink Rate Monitoring using YOLOv8 and MediaPipe Face Mesh
+# Blink Rate Monitor
 
-Real-time blink detection and BPM calculation with live visualization.
+A simple real-time blink detector using your webcam. Uses YOLOv8 for face detection and MediaPipe for eye tracking.
 
-## Features
+## What it does
 
-- **Real-time blink detection** using webcam feed
-- **YOLOv8n** for fast and accurate face detection
-- **MediaPipe Face Mesh** for precise eye landmark extraction
-- **Eye Aspect Ratio (EAR)** calculation for blink detection
-- **Live BPM tracking** with 60-second rolling window
-- **Real-time visualization** with separate graph window
-- **Performance metrics** display (FPS, EAR, BPM)
+- Counts your blinks in real time
+- Shows blinks per minute (BPM)
+- Displays live graphs of your blink rate and eye openness
+- Helps monitor eye strain during screen time
 
-## Installation
+## Setup
 
-1. Clone or download this project
-2. Install required packages:
+Install the required packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
-
-Run the blink detector:
+Run the program:
 
 ```bash
 python blink_detector.py
 ```
 
-### Controls
+## Controls
 
-- **'q'**: Quit the application
-- **'r'**: Reset blink counter
+- **q** - Quit
+- **r** - Reset blink counter
+- **c** - Auto-calibrate blink threshold
+- **+/-** - Adjust blink sensitivity
+- **s** - Change performance settings
+- **p** - Toggle graphs on/off
 
-### Display Information
+## How it works
 
-The main camera window shows:
-- Live video feed with face detection box
-- Eye landmarks (yellow dots)
-- Real-time metrics overlay:
-  - FPS: Current frames per second
-  - Blinks: Total blinks counted
-  - BPM: Blinks per minute (60-second window)
-  - EAR: Current Eye Aspect Ratio
-  - Threshold: EAR threshold for blink detection
+1. **Face detection** - Finds your face using YOLOv8
+2. **Eye tracking** - Uses MediaPipe to track 6 points around each eye
+3. **Blink detection** - Calculates Eye Aspect Ratio (EAR). When EAR drops below threshold = blink
+4. **BPM calculation** - Counts blinks over the last 60 seconds
 
-The separate graph window displays:
-- **Top graph**: Live BPM trend over time
-- **Bottom graph**: Live EAR values with threshold line
+## Display
 
-## How It Works
+**Main window**: Video feed with face box, eye points, and stats overlay
+**Graph window**: Live charts showing BPM and eye openness over time
 
-### 1. Face Detection (YOLOv8n)
-- Detects faces in the camera feed
-- Crops the largest face region for processing
-- Prioritizes the first detected face
-- Handles temporary detection failures gracefully
+## Troubleshooting
 
-### 2. Eye Landmark Extraction (MediaPipe)
-- Extracts 468 facial landmarks from cropped face
-- Focuses on 6 key points per eye for EAR calculation
-- **Left eye indices**: 362, 382, 381, 380, 374, 373
-- **Right eye indices**: 33, 7, 163, 144, 145, 153
+- **No blinks detected?** Press 'c' to calibrate or use +/- to adjust sensitivity
+- **Low FPS?** Press 's' to reduce face detection frequency
+- **Graphs crash?** Press 'p' to disable them - main detection still works
 
-### 3. Blink Detection Logic
-- **Eye Aspect Ratio (EAR)**: `(||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)`
-- **Threshold**: 0.21 (configurable)
-- **Open eye**: EAR ≈ 0.25-0.35
-- **Closed eye**: EAR ≈ 0.10-0.15
-- Blink counted when EAR drops below threshold and returns above
+## Eye Aspect Ratio (EAR)
 
-### 4. BPM Calculation
-- Tracks blink timestamps
-- Calculates blinks per minute using 60-second rolling window
-- Updates in real-time
+EAR measures how open your eyes are:
+- **Open eyes**: ~0.25-0.35
+- **Closed eyes**: ~0.10-0.18
+- **Threshold**: Usually around 0.23 (adjustable)
 
-## Technical Specifications
-
-- **YOLOv8n**: Lightweight object detection for face detection
-- **MediaPipe Face Mesh**: 468-point facial landmark detection
-- **EAR Threshold**: 0.21 (optimized for most users)
-- **Minimum Blink Duration**: 2 consecutive frames
-- **Rolling Window**: 60 seconds for BPM calculation
-- **Update Rate**: Live plotting updates every 10 frames
-
-## Error Handling
-
-- **No face detected**: Displays warning message, continues running
-- **Multiple faces**: Prioritizes largest/closest face
-- **Camera access issues**: Exits with error message
-- **Temporary detection failures**: Uses fallback mechanisms
-
-## Use Cases
-
-- **Eye strain monitoring** during prolonged screen time
-- **Fatigue assessment** for drivers or workers
-- **Medical applications** for blink rate analysis
-- **Research** in computer vision and human behavior
-
-## Performance Notes
-
-- Optimized for real-time processing
-- Uses YOLOv8n for speed over accuracy
-- Separate thread for plotting to avoid blocking main loop
-- Configurable parameters for different use cases
-
-## Future Enhancements
-
-- Export to ONNX/TensorRT for edge deployment
-- Adaptive EAR threshold based on user baseline
-- Historical data logging and analysis
-- Multi-user support and face tracking
-- Jetson Nano optimization
+Normal blink rate is 15-20 per minute. Higher rates may indicate eye strain or fatigue.
