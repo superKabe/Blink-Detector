@@ -9,6 +9,14 @@ A simple real-time blink detector using your webcam. Uses YOLOv8 for face detect
 - Displays live graphs of your blink rate and eye openness
 - Helps monitor eye strain during screen time
 
+## Demo
+
+![Blink Detector in Action](blink_detector_gui.gif)
+
+Example output graph showing 5-minute blink rate analysis:
+
+![Sample Results](Results/Working_blink_plot_window_1_20250703_154528.png)
+
 ## Setup
 
 Install the required packages:

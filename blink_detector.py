@@ -109,7 +109,7 @@ class BlinkDetector:
             self.ax2.set_title('Eye Aspect Ratio (EAR) - Live')
             self.ax2.set_ylabel('EAR')
             self.ax2.set_xlabel('Time (seconds)')
-            self.ax2.set_ylim(0.1, 0.4)
+            self.ax2.set_ylim(0.1, 0.5)  # Increased upper limit to 0.5 for consistency
             self.ax2.axhline(y=self.EAR_THRESHOLD, color='r', linestyle='--', label='Threshold')
             self.ax2.grid(True, alpha=0.3)
             self.ax2.legend()
@@ -315,8 +315,11 @@ class BlinkDetector:
         # Calculate averages for this interval
         interval_ear_avg = sum(self.current_interval_ears) / len(self.current_interval_ears)
         
-        # Calculate BPM for this interval (blinks in last 5 seconds * 12 to get per minute)
-        interval_bpm = len(self.current_interval_blinks) * 12
+        # Calculate BPM for this interval using a rolling 60-second window
+        # Count blinks in the last 60 seconds and convert to BPM
+        current_time_for_bpm = time.time()
+        recent_blinks = [t for t in self.blink_timestamps if current_time_for_bpm - t <= 60.0]
+        interval_bpm = len(recent_blinks)  # Already per minute since we count 60 seconds
         
         # Store the data point
         interval_center_time = self.current_interval_start + (self.plot_interval / 2)
@@ -325,7 +328,7 @@ class BlinkDetector:
         self.window_bpm.append(interval_bpm)
         
         # Check if we have a full 5-minute window (60 points)
-        if len(self.window_times) > 60:
+        if len(self.window_times) >= 60:
             self.save_plot_window()
             # Remove oldest data point to maintain window size
             self.window_times.pop(0)
@@ -346,16 +349,17 @@ class BlinkDetector:
             # Create a temporary figure for saving
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
-            # Convert times to relative seconds from start
-            start_time = self.plot_start_time
-            relative_times = [(t - start_time) for t in self.window_times]
+            # Create evenly spaced time points for 5-second intervals
+            # Each point represents 5 seconds, so for 60 points we have 0 to 295 seconds
+            relative_times = [i * 5 for i in range(len(self.window_times))]
             
             # Plot BPM
             ax1.plot(relative_times, self.window_bpm, 'b-', linewidth=2, marker='o', markersize=3)
             ax1.set_title(f'Blinks Per Minute (BPM) - 5 Minute Window #{self.plot_save_counter + 1}')
             ax1.set_ylabel('BPM')
-            ax1.set_ylim(0, max(30, max(self.window_bpm) * 1.1) if self.window_bpm else 30)
+            ax1.set_ylim(0, 25)  # Fixed range 0-25
             ax1.grid(True, alpha=0.3)
+            ax1.set_xlim(0, 300)  # Force 5-minute (300 second) range
             
             # Plot EAR
             ax2.plot(relative_times, self.window_ear, 'g-', linewidth=2, marker='o', markersize=3)
@@ -363,9 +367,10 @@ class BlinkDetector:
             ax2.set_title(f'Eye Aspect Ratio (EAR) - 5 Minute Window #{self.plot_save_counter + 1}')
             ax2.set_ylabel('EAR')
             ax2.set_xlabel('Time (seconds)')
-            ax2.set_ylim(0.1, 0.4)
+            ax2.set_ylim(0.1, 0.5)  # Increased upper limit to 0.5
             ax2.grid(True, alpha=0.3)
             ax2.legend()
+            ax2.set_xlim(0, 300)  # Force 5-minute (300 second) range
             
             plt.tight_layout()
             
@@ -396,9 +401,8 @@ class BlinkDetector:
                 print("Plot window was closed. Disabling live plotting.")
                 return
                 
-            # Convert timestamps to relative seconds
-            start_time = self.plot_start_time if self.plot_start_time else self.window_times[0]
-            relative_times = [(t - start_time) for t in self.window_times]
+            # Create evenly spaced time points for 5-second intervals
+            relative_times = [i * 5 for i in range(len(self.window_times))]
             
             # Update BPM plot
             self.ax1.clear()
@@ -406,12 +410,9 @@ class BlinkDetector:
             current_bpm = self.window_bpm[-1] if self.window_bpm else 0
             self.ax1.set_title(f'Blinks Per Minute (BPM) - Current: {current_bpm:.1f}')
             self.ax1.set_ylabel('BPM')
-            self.ax1.set_ylim(0, max(30, max(self.window_bpm) * 1.1) if self.window_bpm else 30)
+            self.ax1.set_ylim(0, 25)  # Fixed range 0-25
             self.ax1.grid(True, alpha=0.3)
-            
-            # Set x-axis to show 5-minute window
-            if relative_times:
-                self.ax1.set_xlim(max(0, relative_times[-1] - 300), relative_times[-1] + 10)
+            self.ax1.set_xlim(0, 300)  # Always show 5-minute range
             
             # Update EAR plot
             self.ax2.clear()
@@ -421,13 +422,10 @@ class BlinkDetector:
             self.ax2.set_title(f'Eye Aspect Ratio (EAR) - Current: {current_ear:.3f}')
             self.ax2.set_ylabel('EAR')
             self.ax2.set_xlabel('Time (seconds)')
-            self.ax2.set_ylim(0.1, 0.4)
+            self.ax2.set_ylim(0.1, 0.5)  # Increased upper limit to 0.5
             self.ax2.grid(True, alpha=0.3)
             self.ax2.legend()
-            
-            # Set x-axis to show 5-minute window
-            if relative_times:
-                self.ax2.set_xlim(max(0, relative_times[-1] - 300), relative_times[-1] + 10)
+            self.ax2.set_xlim(0, 300)  # Always show 5-minute range
             
             plt.tight_layout()
             
@@ -462,7 +460,7 @@ class BlinkDetector:
         print("Advanced 5-second interval plotting system:")
         print("  - Data averaged over 5-second intervals")
         print("  - 5-minute scrolling window (60 data points)")
-        print("  - Plots saved automatically when window scrolls")
+        print("  - Plots saved automatically every 5 minutes")
         print("Controls:")
         print("  'q' to quit")
         print("  'r' to reset counter") 
@@ -599,12 +597,22 @@ class BlinkDetector:
             cv2.line(expanded_frame, (0, display_h), (display_w, display_h), (100, 100, 100), 2)
             
             # Info text with better formatting (adjusted for smaller display)
-            # Calculate interval progress
-            interval_progress = ""
-            if self.current_interval_start is not None:
-                elapsed = time.time() - self.current_interval_start
-                remaining = max(0, self.plot_interval - elapsed)
-                interval_progress = f"{remaining:.1f}s"
+            # Calculate 5-minute window progress
+            window_progress = ""
+            if self.plot_start_time is not None:
+                elapsed_total = time.time() - self.plot_start_time
+                # Calculate how much time until next 5-minute window save
+                current_window_position = len(self.window_times) % 60
+                if current_window_position == 0 and len(self.window_times) > 0:
+                    window_progress = "SAVING..."
+                else:
+                    remaining_intervals = 60 - len(self.window_times) if len(self.window_times) < 60 else 60 - current_window_position
+                    remaining_seconds = remaining_intervals * 5
+                    if self.current_interval_start is not None:
+                        # Add remaining time in current 5-second interval
+                        interval_remaining = max(0, self.plot_interval - (time.time() - self.current_interval_start))
+                        remaining_seconds = (remaining_intervals - 1) * 5 + interval_remaining
+                    window_progress = f"{remaining_seconds:.0f}s"
             
             info_data = [
                 ("FPS", f"{self.current_fps}"),
@@ -615,8 +623,8 @@ class BlinkDetector:
                 ("Skip", f"{self.yolo_skip_frames}"),     # Shortened label
                 ("Debug", "ON" if self.debug_mode else "OFF"),
                 ("Plot", "ON" if self.fig is not None else "OFF"),
-                ("Interval", interval_progress),
-                ("Windows", f"{self.plot_save_counter}")
+                ("Window", window_progress),
+                ("Saved", f"{self.plot_save_counter}")
             ]
             
             # Display info in two columns (adjusted for smaller display)
